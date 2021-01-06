@@ -4,14 +4,11 @@ import (
 	"encoding/json"
 )
 
-// DecodeFunc is a function for unmarshaling.
-type DecodeFunc func(v interface{}, data []byte) error
-
 // JSONDecoder xxx
 type JSONDecoder struct{}
 
 // Register records a type and a function for encoding.
-func (dec *JSONDecoder) Register(val interface{}, f DecodeFunc) {
+func (dec *JSONDecoder) Register(val interface{}, f func(v interface{}, data []byte) error) {
 }
 
 // Unmarshal xxx

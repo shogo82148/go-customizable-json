@@ -3,21 +3,45 @@ package customizablejson
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
+	"sync"
 )
 
-// EncodeFunc is a function for marshaling.
-type EncodeFunc func(v interface{}) ([]byte, error)
+type encoderFunc func(v interface{}) (interface{}, error)
 
 // JSONEncoder xxx
-type JSONEncoder struct{}
+type JSONEncoder struct {
+	cache sync.Map
+}
 
 // Register records a type and a function for encoding.
-func (enc *JSONEncoder) Register(val interface{}, f EncodeFunc) {
+func (enc *JSONEncoder) Register(val interface{}, f func(v interface{}) ([]byte, error)) {
+	typ := reflect.TypeOf(val)
+	enc.cache.Store(typ, encoderFunc(func(v interface{}) (interface{}, error) {
+		data, err := f(v)
+		if err != nil {
+			return nil, err
+		}
+		var ret interface{}
+		if err := json.Unmarshal(data, &ret); err != nil {
+			return nil, err
+		}
+		return ret, nil
+	}))
 }
 
 // Marshal xxx
 func (enc *JSONEncoder) Marshal(v interface{}) ([]byte, error) {
-	panic("TODO: implement me!")
+	typ := reflect.TypeOf(v)
+	f, ok := enc.cache.Load(typ)
+	if !ok {
+		panic("TODO: implement me!")
+	}
+	ret, err := f.(encoderFunc)(v)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(ret)
 }
 
 // MarshalIndent is like Marshal but applies Indent to format the output.
