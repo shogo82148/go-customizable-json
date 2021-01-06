@@ -5,14 +5,11 @@ import (
 	"encoding/json"
 )
 
-// EncodeFunc is a function for marshaling.
-type EncodeFunc func(v interface{}) ([]byte, error)
-
 // JSONEncoder xxx
 type JSONEncoder struct{}
 
 // Register records a type and a function for encoding.
-func (enc *JSONEncoder) Register(val interface{}, f EncodeFunc) {
+func (enc *JSONEncoder) Register(val interface{}, f func(v interface{}) ([]byte, error)) {
 }
 
 // Marshal xxx
