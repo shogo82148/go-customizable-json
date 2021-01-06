@@ -33,6 +33,19 @@ func TestMarshal(t *testing.T) {
 				return enc
 			},
 		},
+		{
+			input: map[string]interface{}{
+				"foo": time.Date(2006, time.January, 2, 15, 4, 5, 123456000, time.UTC),
+			},
+			want: `{"foo":"2006-01-02T15:04:05Z"}`,
+			register: func() *JSONEncoder {
+				enc := new(JSONEncoder)
+				enc.Register(time.Time{}, func(v interface{}) ([]byte, error) {
+					return []byte(`"` + v.(time.Time).Format(time.RFC3339) + `"`), nil
+				})
+				return enc
+			},
+		},
 	}
 	for i, tc := range testcases {
 		enc := tc.register()
