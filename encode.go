@@ -2,12 +2,17 @@ package customizablejson
 
 import (
 	"bytes"
+	"encoding"
 	"encoding/json"
 	"reflect"
 	"sync"
 )
 
-type encoderFunc func(v interface{}) (interface{}, error)
+type encodeState struct {
+	enc *JSONEncoder
+}
+
+type toInterfaceFunc func(state *encodeState, v reflect.Value) (interface{}, error)
 
 // JSONEncoder xxx
 type JSONEncoder struct {
@@ -17,8 +22,8 @@ type JSONEncoder struct {
 // Register records a type and a function for encoding.
 func (enc *JSONEncoder) Register(val interface{}, f func(v interface{}) ([]byte, error)) {
 	typ := reflect.TypeOf(val)
-	enc.cache.Store(typ, encoderFunc(func(v interface{}) (interface{}, error) {
-		data, err := f(v)
+	enc.cache.Store(typ, toInterfaceFunc(func(_ *encodeState, v reflect.Value) (interface{}, error) {
+		data, err := f(v.Interface())
 		if err != nil {
 			return nil, err
 		}
@@ -32,16 +37,109 @@ func (enc *JSONEncoder) Register(val interface{}, f func(v interface{}) ([]byte,
 
 // Marshal xxx
 func (enc *JSONEncoder) Marshal(v interface{}) ([]byte, error) {
-	typ := reflect.TypeOf(v)
-	f, ok := enc.cache.Load(typ)
-	if !ok {
-		panic("TODO: implement me!")
-	}
-	ret, err := f.(encoderFunc)(v)
+	state := &encodeState{enc: enc}
+	ret, err := state.toInterface(v)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(ret)
+}
+
+func (enc *JSONEncoder) typeEncoder(t reflect.Type) toInterfaceFunc {
+	if fi, ok := enc.cache.Load(t); ok {
+		return fi.(toInterfaceFunc)
+	}
+
+	// To deal with recursive types, populate the map with an
+	// indirect func before we build it. This type waits on the
+	// real func (f) to be ready and then calls it. This indirect
+	// func is only used for recursive types.
+	var (
+		wg sync.WaitGroup
+		f  toInterfaceFunc
+	)
+	wg.Add(1)
+	fi, loaded := enc.cache.LoadOrStore(t, toInterfaceFunc(func(state *encodeState, v reflect.Value) (interface{}, error) {
+		wg.Wait()
+		return f(state, v)
+	}))
+	if loaded {
+		return fi.(toInterfaceFunc)
+	}
+
+	// Compute the real encoder and replace the indirect func with it.
+	f = enc.newTypeEncoder(t, true)
+	wg.Done()
+	enc.cache.Store(t, f)
+	return f
+}
+
+var (
+	marshalerType     = reflect.TypeOf((*Marshaler)(nil)).Elem()
+	textMarshalerType = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+)
+
+func (enc *JSONEncoder) newTypeEncoder(t reflect.Type, allowAddr bool) toInterfaceFunc {
+	if t.Implements(marshalerType) {
+		return interfaceToInterface
+	}
+	if t.Implements(textMarshalerType) {
+		return interfaceToInterface
+	}
+	switch t.Kind() {
+	case reflect.Struct:
+		return newStructToInterface(t)
+	case reflect.Map:
+		return enc.newMapToInterface(t)
+	case reflect.Slice:
+		panic("TODO: implement me")
+	case reflect.Array:
+		panic("TODO: implement me")
+	}
+	return interfaceToInterface
+}
+
+func interfaceToInterface(state *encodeState, v reflect.Value) (interface{}, error) {
+	return v.Interface(), nil
+}
+
+func newStructToInterface(t reflect.Type) toInterfaceFunc {
+	return interfaceToInterface // TODO: implement me
+}
+
+type mapEncoder struct {
+	retType reflect.Type
+	elemEnc toInterfaceFunc
+}
+
+func (enc *mapEncoder) toInterface(state *encodeState, v reflect.Value) (interface{}, error) {
+	if v.IsNil() {
+		return nil, nil
+	}
+	ret := reflect.MakeMap(enc.retType)
+	keys := v.MapKeys()
+	for _, key := range keys {
+		elem, err := enc.elemEnc(state, v.MapIndex(key))
+		if err != nil {
+			return nil, err
+		}
+		ret.SetMapIndex(key, reflect.ValueOf(elem))
+	}
+	return ret.Interface(), nil
+}
+
+func (enc *JSONEncoder) newMapToInterface(t reflect.Type) toInterfaceFunc {
+	e := &mapEncoder{
+		retType: reflect.MapOf(t.Key(), reflect.TypeOf((*interface{})(nil)).Elem()),
+		elemEnc: enc.typeEncoder(t.Elem()),
+	}
+	return e.toInterface
+}
+
+func (state *encodeState) toInterface(v interface{}) (interface{}, error) {
+	typ := reflect.TypeOf(v)
+	f := state.enc.typeEncoder(typ)
+	return f(state, reflect.ValueOf(v))
 }
 
 // MarshalIndent is like Marshal but applies Indent to format the output.
