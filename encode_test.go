@@ -34,7 +34,7 @@ func TestMarshal(t *testing.T) {
 			},
 		},
 		{
-			input: map[string]interface{}{
+			input: map[string]time.Time{
 				"foo": time.Date(2006, time.January, 2, 15, 4, 5, 123456000, time.UTC),
 			},
 			want: `{"foo":"2006-01-02T15:04:05Z"}`,
