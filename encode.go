@@ -103,7 +103,7 @@ func (enc *JSONEncoder) newTypeEncoder(t reflect.Type, allowAddr bool) toInterfa
 	}
 	switch t.Kind() {
 	case reflect.Interface:
-		panic("TODO: implement me")
+		return enc.interfaceToInterface
 	case reflect.Struct:
 		return enc.newStructToInterface(t)
 	case reflect.Map:
@@ -114,6 +114,13 @@ func (enc *JSONEncoder) newTypeEncoder(t reflect.Type, allowAddr bool) toInterfa
 		return enc.newArrayToInterface(t)
 	}
 	return interfaceToInterface
+}
+
+func (enc *JSONEncoder) interfaceToInterface(state *encodeState, v reflect.Value) (interface{}, error) {
+	if v.IsNil() {
+		return nil, nil
+	}
+	return state.reflectToInterface(v.Elem())
 }
 
 func interfaceToInterface(state *encodeState, v reflect.Value) (interface{}, error) {
