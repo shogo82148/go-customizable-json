@@ -63,6 +63,19 @@ func TestMarshal(t *testing.T) {
 				return enc
 			},
 		},
+		{
+			input: map[string]interface{}{
+				"foo": time.Date(2006, time.January, 2, 15, 4, 5, 123456000, time.UTC),
+			},
+			want: `{"foo":"2006-01-02T15:04:05Z"}`,
+			register: func() *JSONEncoder {
+				enc := new(JSONEncoder)
+				enc.Register(time.Time{}, func(v interface{}) ([]byte, error) {
+					return []byte(`"` + v.(time.Time).Format(time.RFC3339) + `"`), nil
+				})
+				return enc
+			},
+		},
 
 		// struct
 		{
@@ -80,10 +93,39 @@ func TestMarshal(t *testing.T) {
 				return enc
 			},
 		},
+		{
+			input: struct {
+				Foo interface{}
+			}{
+				Foo: time.Date(2006, time.January, 2, 15, 4, 5, 123456000, time.UTC),
+			},
+			want: `{"Foo":"2006-01-02T15:04:05Z"}`,
+			register: func() *JSONEncoder {
+				enc := new(JSONEncoder)
+				enc.Register(time.Time{}, func(v interface{}) ([]byte, error) {
+					return []byte(`"` + v.(time.Time).Format(time.RFC3339) + `"`), nil
+				})
+				return enc
+			},
+		},
 
 		// slice
 		{
 			input: []time.Time{
+				time.Date(2006, time.January, 2, 15, 4, 5, 0, time.UTC),
+				time.Date(2006, time.January, 2, 15, 4, 5, 123456000, time.UTC),
+			},
+			want: `["2006-01-02T15:04:05Z","2006-01-02T15:04:05Z"]`,
+			register: func() *JSONEncoder {
+				enc := new(JSONEncoder)
+				enc.Register(time.Time{}, func(v interface{}) ([]byte, error) {
+					return []byte(`"` + v.(time.Time).Format(time.RFC3339) + `"`), nil
+				})
+				return enc
+			},
+		},
+		{
+			input: []interface{}{
 				time.Date(2006, time.January, 2, 15, 4, 5, 0, time.UTC),
 				time.Date(2006, time.January, 2, 15, 4, 5, 123456000, time.UTC),
 			},
