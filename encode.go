@@ -112,6 +112,8 @@ func (enc *JSONEncoder) newTypeEncoder(t reflect.Type, allowAddr bool) toInterfa
 		return enc.newSliceToInterface(t)
 	case reflect.Array:
 		return enc.newArrayToInterface(t)
+	case reflect.Ptr:
+		return enc.newPtrEncoder(t)
 	}
 	return interfaceToInterface
 }
@@ -263,6 +265,23 @@ func (enc arrayEncoder) toInterface(state *encodeState, v reflect.Value) (interf
 		ret = append(ret, elem)
 	}
 	return ret, nil
+}
+
+type ptrEncoder struct {
+	elemEnc toInterfaceFunc
+}
+
+func (enc *ptrEncoder) toInterface(state *encodeState, v reflect.Value) (interface{}, error) {
+	if v.IsNil() {
+		return nil, nil
+	}
+	// TODO: detect a pointer cycle
+	return enc.elemEnc(state, v.Elem())
+}
+
+func (enc *JSONEncoder) newPtrEncoder(t reflect.Type) toInterfaceFunc {
+	e := ptrEncoder{enc.typeEncoder(t.Elem())}
+	return e.toInterface
 }
 
 func (state *encodeState) reflectToInterface(v reflect.Value) (interface{}, error) {
