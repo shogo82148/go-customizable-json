@@ -80,6 +80,33 @@ func TestMarshal(t *testing.T) {
 				return enc
 			},
 		},
+
+		// slice
+		{
+			input: []time.Time{
+				time.Date(2006, time.January, 2, 15, 4, 5, 0, time.UTC),
+				time.Date(2006, time.January, 2, 15, 4, 5, 123456000, time.UTC),
+			},
+			want: `["2006-01-02T15:04:05Z","2006-01-02T15:04:05Z"]`,
+			register: func() *JSONEncoder {
+				enc := new(JSONEncoder)
+				enc.Register(time.Time{}, func(v interface{}) ([]byte, error) {
+					return []byte(`"` + v.(time.Time).Format(time.RFC3339) + `"`), nil
+				})
+				return enc
+			},
+		},
+		{
+			input: []byte("special case: it will be encoded into base64 string"),
+			want:  `"c3BlY2lhbCBjYXNlOiBpdCB3aWxsIGJlIGVuY29kZWQgaW50byBiYXNlNjQgc3RyaW5n"`,
+			register: func() *JSONEncoder {
+				enc := new(JSONEncoder)
+				enc.Register(time.Time{}, func(v interface{}) ([]byte, error) {
+					return []byte(`"` + v.(time.Time).Format(time.RFC3339) + `"`), nil
+				})
+				return enc
+			},
+		},
 	}
 	for i, tc := range testcases {
 		enc := tc.register()
