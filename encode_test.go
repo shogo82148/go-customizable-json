@@ -96,6 +96,17 @@ func TestMarshal(t *testing.T) {
 				return enc
 			},
 		},
+		{
+			input: []byte("special case: it will be encoded into base64 string"),
+			want:  `"c3BlY2lhbCBjYXNlOiBpdCB3aWxsIGJlIGVuY29kZWQgaW50byBiYXNlNjQgc3RyaW5n"`,
+			register: func() *JSONEncoder {
+				enc := new(JSONEncoder)
+				enc.Register(time.Time{}, func(v interface{}) ([]byte, error) {
+					return []byte(`"` + v.(time.Time).Format(time.RFC3339) + `"`), nil
+				})
+				return enc
+			},
+		},
 	}
 	for i, tc := range testcases {
 		enc := tc.register()
