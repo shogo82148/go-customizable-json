@@ -87,7 +87,7 @@ func TestMarshal(t *testing.T) {
 				time.Date(2006, time.January, 2, 15, 4, 5, 0, time.UTC),
 				time.Date(2006, time.January, 2, 15, 4, 5, 123456000, time.UTC),
 			},
-			want: `{"2006-01-02T15:04:05Z","2006-01-02T15:04:05Z"}`,
+			want: `["2006-01-02T15:04:05Z","2006-01-02T15:04:05Z"]`,
 			register: func() *JSONEncoder {
 				enc := new(JSONEncoder)
 				enc.Register(time.Time{}, func(v interface{}) ([]byte, error) {

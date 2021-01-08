@@ -98,9 +98,9 @@ func (enc *JSONEncoder) newTypeEncoder(t reflect.Type, allowAddr bool) toInterfa
 	case reflect.Map:
 		return enc.newMapToInterface(t)
 	case reflect.Slice:
-		panic("TODO: implement me")
+		return enc.newSliceToInterface(t)
 	case reflect.Array:
-		panic("TODO: implement me")
+		return enc.newArrayToInterface(t)
 	}
 	return interfaceToInterface
 }
@@ -199,6 +199,52 @@ func (enc *JSONEncoder) newMapToInterface(t reflect.Type) toInterfaceFunc {
 		elemEnc: enc.typeEncoder(t.Elem()),
 	}
 	return e.toInterface
+}
+
+func (enc *JSONEncoder) newSliceToInterface(t reflect.Type) toInterfaceFunc {
+	// Byte slices get special treatment; arrays don't.
+	if t.Elem().Kind() == reflect.Uint8 {
+		p := reflect.PtrTo(t.Elem())
+		if !p.Implements(marshalerType) && !p.Implements(textMarshalerType) {
+			return interfaceToInterface
+		}
+	}
+	e := sliceEncoder{enc.newArrayToInterface(t)}
+	return e.toInterface
+}
+
+// sliceEncoder just wraps an arrayEncoder, checking to make sure the value isn't nil.
+type sliceEncoder struct {
+	arrayEnc toInterfaceFunc
+}
+
+func (enc sliceEncoder) toInterface(state *encodeState, v reflect.Value) (interface{}, error) {
+	if v.IsNil() {
+		return nil, nil
+	}
+	return enc.arrayEnc(state, v)
+}
+
+func (enc *JSONEncoder) newArrayToInterface(t reflect.Type) toInterfaceFunc {
+	e := arrayEncoder{enc.typeEncoder(t.Elem())}
+	return e.toInterface
+}
+
+type arrayEncoder struct {
+	elemEnc toInterfaceFunc
+}
+
+func (enc arrayEncoder) toInterface(state *encodeState, v reflect.Value) (interface{}, error) {
+	n := v.Len()
+	ret := make([]interface{}, 0, n)
+	for i := 0; i < n; i++ {
+		elem, err := enc.elemEnc(state, v.Index(i))
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, elem)
+	}
+	return ret, nil
 }
 
 func (state *encodeState) toInterface(v interface{}) (interface{}, error) {
