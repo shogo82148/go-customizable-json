@@ -49,6 +49,17 @@ func (enc *JSONEncoder) Marshal(v interface{}) ([]byte, error) {
 	return json.Marshal(ret)
 }
 
+func invalidValueToInterface(state *encodeState, v reflect.Value) (interface{}, error) {
+	return nil, nil
+}
+
+func (enc *JSONEncoder) valueEncoder(v reflect.Value) toInterfaceFunc {
+	if !v.IsValid() {
+		return invalidValueToInterface
+	}
+	return enc.typeEncoder(v.Type())
+}
+
 func (enc *JSONEncoder) typeEncoder(t reflect.Type) toInterfaceFunc {
 	if fi, ok := enc.cache.Load(t); ok {
 		return fi.(toInterfaceFunc)
@@ -92,7 +103,7 @@ func (enc *JSONEncoder) newTypeEncoder(t reflect.Type, allowAddr bool) toInterfa
 	}
 	switch t.Kind() {
 	case reflect.Interface:
-		panic("TODO: implement me")
+		return enc.interfaceToInterface
 	case reflect.Struct:
 		return enc.newStructToInterface(t)
 	case reflect.Map:
@@ -103,6 +114,13 @@ func (enc *JSONEncoder) newTypeEncoder(t reflect.Type, allowAddr bool) toInterfa
 		return enc.newArrayToInterface(t)
 	}
 	return interfaceToInterface
+}
+
+func (enc *JSONEncoder) interfaceToInterface(state *encodeState, v reflect.Value) (interface{}, error) {
+	if v.IsNil() {
+		return nil, nil
+	}
+	return state.reflectToInterface(v.Elem())
 }
 
 func interfaceToInterface(state *encodeState, v reflect.Value) (interface{}, error) {
@@ -247,10 +265,12 @@ func (enc arrayEncoder) toInterface(state *encodeState, v reflect.Value) (interf
 	return ret, nil
 }
 
+func (state *encodeState) reflectToInterface(v reflect.Value) (interface{}, error) {
+	return state.enc.valueEncoder(v)(state, v)
+}
+
 func (state *encodeState) toInterface(v interface{}) (interface{}, error) {
-	typ := reflect.TypeOf(v)
-	f := state.enc.typeEncoder(typ)
-	return f(state, reflect.ValueOf(v))
+	return state.reflectToInterface(reflect.ValueOf(v))
 }
 
 // MarshalIndent is like Marshal but applies Indent to format the output.
