@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -13,7 +14,17 @@ import (
 
 type encodeState struct {
 	enc *JSONEncoder
+
+	// Keep track of what pointers we've seen in the current recursive call
+	// path, to avoid cycles that could lead to a stack overflow. Only do
+	// the relatively expensive map operations if ptrLevel is larger than
+	// startDetectingCyclesAfter, so that we skip the work if we're within a
+	// reasonable amount of nested pointers deep.
+	ptrLevel uint
+	ptrSeen  map[interface{}]struct{}
 }
+
+const startDetectingCyclesAfter = 1000
 
 type toInterfaceFunc func(state *encodeState, v reflect.Value) (interface{}, error)
 
@@ -41,7 +52,10 @@ func (enc *JSONEncoder) Register(val interface{}, f func(v interface{}) ([]byte,
 
 // Marshal xxx
 func (enc *JSONEncoder) Marshal(v interface{}) ([]byte, error) {
-	state := &encodeState{enc: enc}
+	state := &encodeState{
+		enc:     enc,
+		ptrSeen: make(map[interface{}]struct{}),
+	}
 	ret, err := state.toInterface(v)
 	if err != nil {
 		return nil, err
@@ -275,8 +289,19 @@ func (enc *ptrEncoder) toInterface(state *encodeState, v reflect.Value) (interfa
 	if v.IsNil() {
 		return nil, nil
 	}
-	// TODO: detect a pointer cycle
-	return enc.elemEnc(state, v.Elem())
+	if state.ptrLevel++; state.ptrLevel > startDetectingCyclesAfter {
+		// We're a large number of nested ptrEncoder.encode calls deep;
+		// start checking if we've run into a pointer cycle.
+		ptr := v.Interface()
+		if _, ok := state.ptrSeen[ptr]; ok {
+			return nil, &UnsupportedValueError{Value: v, Str: fmt.Sprintf("encountered a cycle via %s", v.Type())}
+		}
+		state.ptrSeen[ptr] = struct{}{}
+		defer delete(state.ptrSeen, ptr)
+	}
+	ret, err := enc.elemEnc(state, v.Elem())
+	state.ptrLevel--
+	return ret, err
 }
 
 func (enc *JSONEncoder) newPtrEncoder(t reflect.Type) toInterfaceFunc {
