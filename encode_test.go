@@ -177,3 +177,17 @@ func TestMarshal(t *testing.T) {
 		}
 	}
 }
+
+func TestMarshal_Cycle(t *testing.T) {
+	type Cycle struct {
+		Next *Cycle
+	}
+	cycle := new(Cycle)
+	cycle.Next = cycle
+
+	enc := new(JSONEncoder)
+	_, err := enc.Marshal(cycle)
+	if _, ok := err.(*UnsupportedValueError); !ok {
+		t.Errorf("want UnsupportedValueError, got %T", err)
+	}
+}
