@@ -14,6 +14,8 @@ import (
 
 type unmarshalFunc func(v interface{}, data []byte) error
 
+var textUnmarshalerType = reflect.TypeOf(new(encoding.TextUnmarshaler)).Elem()
+
 // JSONDecoder xxx
 type JSONDecoder struct {
 	unmarshalFuncs sync.Map // map[reflect]unmarshalFunc
@@ -230,6 +232,63 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				}
 			} else {
 				return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
+			}
+		case reflect.Map:
+			t := out.Type()
+			kt := t.Key()
+			if kt.Kind() == reflect.String && t.Elem().Kind() == reflect.Interface && out.Len() == 0 {
+				// fast pass
+				// we have already decoded into map[string]interface{}
+				if dec.useNumber {
+					out.Set(reflect.ValueOf(v))
+				} else {
+					u, err := convertNumber2Float64(v)
+					if err != nil {
+						return err
+					}
+					out.Set(reflect.ValueOf(u))
+				}
+				break
+			}
+
+			// Map key must either have string kind, have an integer kind,
+			// or be an encoding.TextUnmarshaler.
+			switch kt.Kind() {
+			case reflect.String:
+			default:
+				if !reflect.PtrTo(kt).Implements(textUnmarshalerType) {
+					return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
+				}
+			}
+			if out.IsNil() {
+				out.Set(reflect.MakeMap(t))
+			}
+			var mapElem reflect.Value
+			for key, vv := range v {
+				elemType := out.Type().Elem()
+				if !mapElem.IsValid() {
+					mapElem = reflect.New(elemType).Elem()
+				} else {
+					mapElem.Set(reflect.Zero(elemType))
+				}
+				subv := mapElem
+				if err := dec.decode(vv, subv); err != nil {
+					return err
+				}
+				var kv reflect.Value
+				switch {
+				case kt.Kind() == reflect.String:
+					kv = reflect.ValueOf(key).Convert(kt)
+				case reflect.PtrTo(kt).Implements(textUnmarshalerType):
+					kv = reflect.New(kt)
+					if err := dec.decode(key, kv); err != nil {
+						return err
+					}
+					kv = kv.Elem()
+				default:
+					panic("json: Unexpected key type") // should never occur
+				}
+				out.SetMapIndex(kv, subv)
 			}
 		}
 	case []interface{}:
