@@ -652,3 +652,8 @@ func (dec *JSONDecoder) cachedTypeFields(t reflect.Type) structFields {
 	f, _ := dec.fieldCache.LoadOrStore(t, dec.typeFields(t))
 	return f.(structFields)
 }
+
+// Valid is an alias of json.Valid.
+func Valid(data []byte) bool {
+	return json.Valid(data)
+}

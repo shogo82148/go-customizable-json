@@ -23,7 +23,7 @@ type Decoder struct {
 // The decoder introduces its own buffering and may
 // read data from r beyond the JSON values requested.
 func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{}
+	return defaultDecoder.NewDecoder(r)
 }
 
 // NewDecoder returns a new decoder that reads from r.
@@ -53,7 +53,17 @@ func (dec *Decoder) More() bool {
 // Token returns the next JSON token in the input stream.
 // At the end of the input stream, Token returns nil, io.EOF.
 func (dec *Decoder) Token() (json.Token, error) {
-	return dec.dec.Token()
+	ret, err := dec.dec.Token()
+	if err != nil {
+		return nil, err
+	}
+	if dec.useNumber {
+		return ret, nil
+	}
+	if num, ok := ret.(Number); ok {
+		return num.Float64()
+	}
+	return ret, nil
 }
 
 func (dec *Decoder) withErrorContext(err error) error {
