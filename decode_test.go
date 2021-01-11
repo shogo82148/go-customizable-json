@@ -7,6 +7,8 @@ import (
 )
 
 func ptrTime(v time.Time) *time.Time { return &v }
+func ptrString(v string) *string     { return &v }
+func ptrByteSlice(v []byte) *[]byte  { return &v }
 
 func TestUnmarshal(t *testing.T) {
 	testcases := []struct {
@@ -30,6 +32,24 @@ func TestUnmarshal(t *testing.T) {
 					*vv = t
 					return nil
 				})
+				return dec
+			},
+		},
+		{
+			input: `"Mon Jan  2 15:04:05 2006"`,
+			ptr:   new(string),
+			want:  ptrString("Mon Jan  2 15:04:05 2006"),
+			register: func() *JSONDecoder {
+				dec := new(JSONDecoder)
+				return dec
+			},
+		},
+		{
+			input: `"YmFzZTY0IGVuY29kZWQgc3RyaW5n"`,
+			ptr:   new([]byte),
+			want:  ptrByteSlice([]byte("base64 encoded string")),
+			register: func() *JSONDecoder {
+				dec := new(JSONDecoder)
 				return dec
 			},
 		},
