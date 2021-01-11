@@ -164,6 +164,20 @@ func TestMarshal(t *testing.T) {
 				return enc
 			},
 		},
+
+		// string tag
+		{
+			input: struct {
+				Int int `json:"int,string"`
+			}{
+				Int: 42,
+			},
+			want: `{"int":"42"}`,
+			register: func() *JSONEncoder {
+				enc := new(JSONEncoder)
+				return enc
+			},
+		},
 	}
 	for i, tc := range testcases {
 		enc := tc.register()

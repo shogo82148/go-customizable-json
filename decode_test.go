@@ -223,6 +223,21 @@ func TestUnmarshal(t *testing.T) {
 				return dec
 			},
 		},
+		{
+			input: `{"int":"42"}`,
+			ptr: new(struct {
+				Int int `json:"int,string"`
+			}),
+			want: &struct {
+				Int int `json:"int,string"`
+			}{
+				Int: 42,
+			},
+			register: func() *JSONDecoder {
+				dec := new(JSONDecoder)
+				return dec
+			},
+		},
 	}
 	for i, tc := range testcases {
 		ptr := tc.ptr
