@@ -200,6 +200,13 @@ FieldLoop:
 		if err != nil {
 			return nil, err
 		}
+		if f.quoted {
+			data, err := json.Marshal(vv)
+			if err != nil {
+				return nil, err
+			}
+			vv = string(data)
+		}
 		ret[f.name] = vv
 	}
 	return ret, nil
