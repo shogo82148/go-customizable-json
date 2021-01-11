@@ -34,23 +34,38 @@ func (dec *Decoder) Decode(v interface{}) error {
 
 // An Encoder writes JSON values to an output stream.
 type Encoder struct {
-	// TODO: fill me
+	encoder   *json.Encoder
+	myEncoder *JSONEncoder
 }
 
 // NewEncoder returns a new encoder that writes to w.
 func NewEncoder(w io.Writer) *Encoder {
-	return &Encoder{}
+	return defaultEncoder.NewEncoder(w)
+}
+
+// NewEncoder returns a new encoder that writes to w.
+func (enc *JSONEncoder) NewEncoder(w io.Writer) *Encoder {
+	return &Encoder{
+		encoder:   json.NewEncoder(w),
+		myEncoder: enc,
+	}
 }
 
 // Encode xxx
 func (enc *Encoder) Encode(v interface{}) error {
-	panic("TODO: implement me")
+	state := enc.myEncoder.newState()
+	ret, err := state.toInterface(v)
+	if err != nil {
+		return err
+	}
+	return enc.encoder.Encode(ret)
 }
 
 // SetIndent instructs the encoder to format each subsequent encoded
 // value as if indented by the package-level function Indent(dst, src, prefix, indent).
 // Calling SetIndent("", "") disables indentation.
 func (enc *Encoder) SetIndent(prefix, indent string) {
+	enc.encoder.SetIndent(prefix, indent)
 }
 
 // SetEscapeHTML specifies whether problematic HTML characters
