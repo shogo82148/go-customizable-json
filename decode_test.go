@@ -181,6 +181,15 @@ func TestUnmarshal(t *testing.T) {
 				return dec
 			},
 		},
+		{
+			input: `{"foo":42}`,
+			ptr:   new(interface{}),
+			want:  map[string]interface{}{"foo": 42.0},
+			register: func() *JSONDecoder {
+				dec := new(JSONDecoder)
+				return dec
+			},
+		},
 	}
 	for i, tc := range testcases {
 		ptr := tc.ptr
