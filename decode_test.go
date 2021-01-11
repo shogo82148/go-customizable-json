@@ -143,6 +143,23 @@ func TestUnmarshal(t *testing.T) {
 				return dec
 			},
 		},
+		{
+			input: `{"null":null}`,
+			ptr: &struct {
+				Null map[string]interface{}
+			}{
+				Null: map[string]interface{}{
+					"this should be cleared": "",
+				},
+			},
+			want: new(struct {
+				Null map[string]interface{}
+			}),
+			register: func() *JSONDecoder {
+				dec := new(JSONDecoder)
+				return dec
+			},
+		},
 	}
 	for i, tc := range testcases {
 		ptr := tc.ptr
