@@ -438,9 +438,6 @@ func (enc *JSONEncoder) typeFields(t reflect.Type) structFields {
 	// Fields found.
 	var fields []field
 
-	// Buffer to run HTMLEscape on field names.
-	var nameEscBuf bytes.Buffer
-
 	for len(next) > 0 {
 		current, next = next, current[:0]
 		count, nextCount = nextCount, map[reflect.Type]int{}
