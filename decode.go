@@ -3,6 +3,7 @@ package customizablejson
 import (
 	"bytes"
 	"encoding"
+	"encoding/base64"
 	"encoding/json"
 	"reflect"
 	"sort"
@@ -149,10 +150,33 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 
 	out = pv
 	switch v := in.(type) {
+	case string:
+		switch out.Kind() {
+		default:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
+		case reflect.Slice:
+			if out.Type().Elem().Kind() == reflect.Uint8 {
+				b, err := base64.StdEncoding.DecodeString(v)
+				if err != nil {
+					return err
+				}
+				out.SetBytes(b)
+				break
+			}
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
+		case reflect.String:
+			out.SetString(v)
+		case reflect.Interface:
+			if out.NumMethod() == 0 {
+				out.Set(reflect.ValueOf(v))
+			} else {
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "string", Type: out.Type()})
+			}
+		}
 	default:
-		_ = v
 		panic("TODO: implement me!")
 	}
+	return nil
 }
 
 var defaultDecoder = new(JSONDecoder)
