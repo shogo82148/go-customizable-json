@@ -45,6 +45,17 @@ func (dec *Decoder) Buffered() io.Reader {
 	return dec.dec.Buffered()
 }
 
+// More reports whether there is another element in the current array or object being parsed.
+func (dec *Decoder) More() bool {
+	return dec.dec.More()
+}
+
+// Token returns the next JSON token in the input stream.
+// At the end of the input stream, Token returns nil, io.EOF.
+func (dec *Decoder) Token() (json.Token, error) {
+	return dec.dec.Token()
+}
+
 func (dec *Decoder) withErrorContext(err error) error {
 	if dec.errorContext.Struct != "" || dec.errorContext.Field != "" {
 		switch err := err.(type) {
