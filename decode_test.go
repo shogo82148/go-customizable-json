@@ -18,11 +18,11 @@ func TestUnmarshal(t *testing.T) {
 		{
 			input: `"Mon Jan  2 15:04:05 2006"`,
 			ptr:   new(time.Time),
-			want:  ptrTime(time.Date(2006, time.January, 2, 15, 4, 5, 123456000, time.UTC)),
+			want:  ptrTime(time.Date(2006, time.January, 2, 15, 4, 5, 0, time.UTC)),
 			register: func() *JSONDecoder {
 				dec := new(JSONDecoder)
-				dec.Register(time.Time{}, func(v interface{}, data []byte) error {
-					t, err := time.Parse(time.ANSIC, string(data))
+				dec.Register(new(time.Time), func(v interface{}, data []byte) error {
+					t, err := time.Parse(`"`+time.ANSIC+`"`, string(data))
 					if err != nil {
 						return err
 					}

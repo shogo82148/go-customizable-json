@@ -3,11 +3,19 @@ package customizablejson
 import (
 	"encoding/json"
 	"io"
+	"reflect"
 )
 
 // A Decoder reads and decodes JSON values from an input stream.
 type Decoder struct {
-	// TODO: fill me
+	dec                   *json.Decoder
+	myDec                 *JSONDecoder
+	disallowUnknownFields bool
+	useNumber             bool
+	errorContext          struct { // provides context for type errors
+		Struct string
+		Field  string
+	}
 }
 
 // NewDecoder returns a new decoder that reads from r.
@@ -18,18 +26,61 @@ func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{}
 }
 
+// NewDecoder returns a new decoder that reads from r.
+//
+// The decoder introduces its own buffering and may
+// read data from r beyond the JSON values requested.
+func (dec *JSONDecoder) NewDecoder(r io.Reader) *Decoder {
+	d := json.NewDecoder(r)
+	d.UseNumber()
+	return &Decoder{
+		dec:   d,
+		myDec: dec,
+	}
+}
+
+// Buffered returns a reader of the data remaining in the Decoder's buffer.
+// The reader is valid until the next call to Decode.
+func (dec *Decoder) Buffered() io.Reader {
+	return dec.dec.Buffered()
+}
+
+func (dec *Decoder) withErrorContext(err error) error {
+	if dec.errorContext.Struct != "" || dec.errorContext.Field != "" {
+		switch err := err.(type) {
+		case *UnmarshalTypeError:
+			err.Struct = dec.errorContext.Struct
+			err.Field = dec.errorContext.Field
+			return err
+		}
+	}
+	return err
+}
+
 // UseNumber causes the Decoder to unmarshal a number into an interface{} as a
 // Number instead of as a float64.
-func (dec *Decoder) UseNumber() {}
+func (dec *Decoder) UseNumber() {
+	dec.useNumber = true
+}
 
 // DisallowUnknownFields causes the Decoder to return an error when the destination
 // is a struct and the input contains object keys which do not match any
 // non-ignored, exported fields in the destination.
-func (dec *Decoder) DisallowUnknownFields() {}
+func (dec *Decoder) DisallowUnknownFields() {
+	dec.disallowUnknownFields = true
+}
 
 // Decode xxx
 func (dec *Decoder) Decode(v interface{}) error {
-	panic("TODO: implement me")
+	var iv interface{}
+	if err := dec.dec.Decode(&iv); err != nil {
+		return err
+	}
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return &InvalidUnmarshalError{Type: reflect.TypeOf(v)}
+	}
+	return dec.decode(iv, rv)
 }
 
 // An Encoder writes JSON values to an output stream.
