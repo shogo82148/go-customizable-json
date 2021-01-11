@@ -106,20 +106,20 @@ func ExampleDecoder_Token() {
 		fmt.Printf("\n")
 	}
 	// Output:
-	// customizablejson.Delim: { (more)
+	// json.Delim: { (more)
 	// string: Message (more)
 	// string: Hello (more)
 	// string: Array (more)
-	// customizablejson.Delim: [ (more)
+	// json.Delim: [ (more)
 	// float64: 1 (more)
 	// float64: 2 (more)
 	// float64: 3
-	// customizablejson.Delim: ] (more)
+	// json.Delim: ] (more)
 	// string: Null (more)
 	// <nil>: <nil> (more)
 	// string: Number (more)
 	// float64: 1.234
-	// customizablejson.Delim: }
+	// json.Delim: }
 }
 
 // This example uses a Decoder to decode a streaming array of JSON objects.
