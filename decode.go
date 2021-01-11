@@ -199,6 +199,52 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 				}
 			}
 		}
+	case []interface{}:
+		switch out.Kind() {
+		default:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "array", Type: out.Type()})
+		case reflect.Interface:
+			if out.NumMethod() == 0 {
+				out.Set(reflect.ValueOf(v))
+			} else {
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "array", Type: out.Type()})
+			}
+		case reflect.Array:
+			l := len(v)
+			if out.Len() < l {
+				// Ran out of fixed array: skip.
+				l = out.Len()
+			}
+			var i int
+			for i = 0; i < l; i++ {
+				if err := dec.decode(v[i], out.Index(i)); err != nil {
+					return err
+				}
+			}
+			if i < out.Len() {
+				// Zero the rest.
+				zero := reflect.Zero(out.Type().Elem())
+				for ; i < out.Len(); i++ {
+					out.Index(i).Set(zero)
+				}
+			}
+		case reflect.Slice:
+			if len(v) == 0 {
+				out.Set(reflect.MakeSlice(out.Type(), 0, 0))
+				break
+			}
+			// Grow slice if necessary
+			if len(v) > out.Cap() {
+				newout := reflect.MakeSlice(out.Type(), len(v), len(v))
+				out.Set(newout)
+			}
+			out.SetLen(len(v))
+			for i, vv := range v {
+				if err := dec.decode(vv, out.Index(i)); err != nil {
+					return err
+				}
+			}
+		}
 	case Number:
 		switch out.Kind() {
 		default:

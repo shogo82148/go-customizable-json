@@ -136,7 +136,7 @@ func TestUnmarshal(t *testing.T) {
 				SliceP []*Small
 			}{
 				Slice:  []Small{{Tag: "tag20"}, {Tag: "tag21"}},
-				SliceP: []*Small{{Tag: "tag22"}, nil, {Tag: "tag23"}},
+				SliceP: []*Small{{Tag: "tag22"}, {Tag: "tag23"}},
 			},
 			register: func() *JSONDecoder {
 				dec := new(JSONDecoder)
