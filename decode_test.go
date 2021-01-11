@@ -53,6 +53,71 @@ func TestUnmarshal(t *testing.T) {
 				return dec
 			},
 		},
+		{
+			input: `{
+				"Int": 2,
+				"Int8": 3,
+				"Int16": 4,
+				"Int32": 5,
+				"Int64": 6,
+				"Uint": 7,
+				"Uint8": 8,
+				"Uint16": 9,
+				"Uint32": 10,
+				"Uint64": 11,
+				"Uintptr": 12,
+				"Float32": 13,
+				"Float64": 14
+			}`,
+			ptr: new(struct {
+				Int     int
+				Int8    int8
+				Int16   int16
+				Int32   int32
+				Int64   int64
+				Uint    uint
+				Uint8   uint8
+				Uint16  uint16
+				Uint32  uint32
+				Uint64  uint64
+				Uintptr uintptr
+				Float32 float32
+				Float64 float64
+			}),
+			want: &struct {
+				Int     int
+				Int8    int8
+				Int16   int16
+				Int32   int32
+				Int64   int64
+				Uint    uint
+				Uint8   uint8
+				Uint16  uint16
+				Uint32  uint32
+				Uint64  uint64
+				Uintptr uintptr
+				Float32 float32
+				Float64 float64
+			}{
+				Int:     2,
+				Int8:    3,
+				Int16:   4,
+				Int32:   5,
+				Int64:   6,
+				Uint:    7,
+				Uint8:   8,
+				Uint16:  9,
+				Uint32:  10,
+				Uint64:  11,
+				Uintptr: 12,
+				Float32: 13,
+				Float64: 14,
+			},
+			register: func() *JSONDecoder {
+				dec := new(JSONDecoder)
+				return dec
+			},
+		},
 	}
 	for i, tc := range testcases {
 		ptr := tc.ptr
