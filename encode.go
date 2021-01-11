@@ -50,12 +50,16 @@ func (enc *JSONEncoder) Register(val interface{}, f func(v interface{}) ([]byte,
 	}))
 }
 
-// Marshal xxx
-func (enc *JSONEncoder) Marshal(v interface{}) ([]byte, error) {
-	state := &encodeState{
+func (enc *JSONEncoder) newState() *encodeState {
+	return &encodeState{
 		enc:     enc,
 		ptrSeen: make(map[interface{}]struct{}),
 	}
+}
+
+// Marshal xxx
+func (enc *JSONEncoder) Marshal(v interface{}) ([]byte, error) {
+	state := enc.newState()
 	ret, err := state.toInterface(v)
 	if err != nil {
 		return nil, err
@@ -319,7 +323,12 @@ func (state *encodeState) toInterface(v interface{}) (interface{}, error) {
 
 // MarshalIndent is like Marshal but applies Indent to format the output.
 func (enc *JSONEncoder) MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
-	panic("TODO: implement me!")
+	state := enc.newState()
+	ret, err := state.toInterface(v)
+	if err != nil {
+		return nil, err
+	}
+	return json.MarshalIndent(ret, prefix, indent)
 }
 
 var defaultEncoder = new(JSONEncoder)
