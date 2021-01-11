@@ -493,9 +493,6 @@ func (dec *JSONDecoder) typeFields(t reflect.Type) structFields {
 	// Fields found.
 	var fields []field
 
-	// Buffer to run HTMLEscape on field names.
-	var nameEscBuf bytes.Buffer
-
 	for len(next) > 0 {
 		current, next = next, current[:0]
 		count, nextCount = nextCount, map[reflect.Type]int{}
@@ -572,11 +569,6 @@ func (dec *JSONDecoder) typeFields(t reflect.Type) structFields {
 					}
 					field.nameBytes = []byte(field.name)
 					field.equalFold = foldFunc(field.nameBytes)
-
-					// Build nameEscHTML and nameNonEsc ahead of time.
-					nameEscBuf.Reset()
-					HTMLEscape(&nameEscBuf, field.nameBytes)
-					field.nameEscHTML = nameEscBuf.String()
 
 					fields = append(fields, field)
 					if count[f.typ] > 1 {
