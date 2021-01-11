@@ -237,10 +237,10 @@ func ExampleRawMessage_marshal() {
 
 	// Output:
 	// {
+	// 	"body": "Hello Gophers!",
 	// 	"header": {
 	// 		"precomputed": true
-	// 	},
-	// 	"body": "Hello Gophers!"
+	// 	}
 	// }
 }
 
