@@ -229,7 +229,7 @@ func TestUnmarshal(t *testing.T) {
 				Int int `json:"int,string"`
 			}),
 			want: &struct {
-				Int int
+				Int int `json:"int,string"`
 			}{
 				Int: 42,
 			},
