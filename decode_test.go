@@ -182,9 +182,18 @@ func TestUnmarshal(t *testing.T) {
 			},
 		},
 		{
-			input: `{"foo":42}`,
-			ptr:   new(interface{}),
-			want:  map[string]interface{}{"foo": 42.0},
+			input: `{"Interface": {"foo": 42, "bar": [1, 2]}}`,
+			ptr: new(struct {
+				Interface interface{}
+			}),
+			want: &struct {
+				Interface interface{}
+			}{
+				Interface: map[string]interface{}{
+					"foo": 42.0,
+					"bar": []interface{}{1.0, 2.0},
+				},
+			},
 			register: func() *JSONDecoder {
 				dec := new(JSONDecoder)
 				return dec

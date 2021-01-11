@@ -217,6 +217,20 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 					return err
 				}
 			}
+		case reflect.Interface:
+			if out.NumMethod() == 0 {
+				if dec.useNumber {
+					out.Set(reflect.ValueOf(v))
+				} else {
+					u, err := convertNumber2Float64(v)
+					if err != nil {
+						return err
+					}
+					out.Set(reflect.ValueOf(u))
+				}
+			} else {
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
+			}
 		}
 	case []interface{}:
 		switch out.Kind() {
@@ -336,6 +350,35 @@ func (dec *Decoder) convertNumber(s string) (interface{}, error) {
 		return nil, &UnmarshalTypeError{Value: "number " + s, Type: reflect.TypeOf(0.0)}
 	}
 	return f, nil
+}
+
+// convertNumber2Float64 converts number literals in v recursively.
+func convertNumber2Float64(v interface{}) (interface{}, error) {
+	switch v := v.(type) {
+	case Number:
+		f, err := v.Float64()
+		if err != nil {
+			return nil, &UnmarshalTypeError{Value: "number " + string(v), Type: reflect.TypeOf(0.0)}
+		}
+		return f, nil
+	case []interface{}:
+		for i, vv := range v {
+			var err error
+			v[i], err = convertNumber2Float64(vv)
+			if err != nil {
+				return nil, err
+			}
+		}
+	case map[string]interface{}:
+		for key, vv := range v {
+			var err error
+			v[key], err = convertNumber2Float64(vv)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return v, nil
 }
 
 var defaultDecoder = new(JSONDecoder)
