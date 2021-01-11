@@ -158,6 +158,19 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			out.Set(reflect.Zero(out.Type()))
 			// otherwise, ignore null for primitives
 		}
+	case bool:
+		switch out.Kind() {
+		default:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "bool", Type: out.Type()})
+		case reflect.Bool:
+			out.SetBool(v)
+		case reflect.Interface:
+			if out.NumMethod() == 0 {
+				out.Set(reflect.ValueOf(v))
+			} else {
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "bool", Type: out.Type()})
+			}
+		}
 	case map[string]interface{}:
 		switch out.Kind() {
 		default:

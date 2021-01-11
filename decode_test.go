@@ -160,6 +160,27 @@ func TestUnmarshal(t *testing.T) {
 				return dec
 			},
 		},
+		{
+			input: `{"True":true,"False":false}`,
+			ptr: &struct {
+				True  bool
+				False bool
+			}{
+				True:  false,
+				False: true,
+			},
+			want: &struct {
+				True  bool
+				False bool
+			}{
+				True:  true,
+				False: false,
+			},
+			register: func() *JSONDecoder {
+				dec := new(JSONDecoder)
+				return dec
+			},
+		},
 	}
 	for i, tc := range testcases {
 		ptr := tc.ptr
