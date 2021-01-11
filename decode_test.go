@@ -199,6 +199,30 @@ func TestUnmarshal(t *testing.T) {
 				return dec
 			},
 		},
+		{
+			input: `{"Map": {"foo": 42, "bar": [1, 2]}, "MapInt": {"one": 1, "Answer to the Ultimate Question of Life, the Universe, and Everything": 42}}`,
+			ptr: new(struct {
+				Map    map[string]interface{}
+				MapInt map[string]int
+			}),
+			want: &struct {
+				Map    map[string]interface{}
+				MapInt map[string]int
+			}{
+				Map: map[string]interface{}{
+					"foo": 42.0,
+					"bar": []interface{}{1.0, 2.0},
+				},
+				MapInt: map[string]int{
+					"one": 1,
+					"Answer to the Ultimate Question of Life, the Universe, and Everything": 42,
+				},
+			},
+			register: func() *JSONDecoder {
+				dec := new(JSONDecoder)
+				return dec
+			},
+		},
 	}
 	for i, tc := range testcases {
 		ptr := tc.ptr
