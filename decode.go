@@ -152,6 +152,12 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 
 	out = pv
 	switch v := in.(type) {
+	case nil:
+		switch out.Kind() {
+		case reflect.Interface, reflect.Ptr, reflect.Map, reflect.Slice:
+			out.Set(reflect.Zero(out.Type()))
+			// otherwise, ignore null for primitives
+		}
 	case map[string]interface{}:
 		switch out.Kind() {
 		default:
@@ -301,7 +307,7 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 			}
 		}
 	default:
-		panic("TODO: implement me!")
+		panic(fmt.Sprintf("unknown type: %v", reflect.TypeOf(v)))
 	}
 	return nil
 }
