@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -209,6 +210,19 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 					}
 					dec.errorContext.Struct = out.Type().Name()
 					dec.errorContext.Field = f.name
+					if f.quoted {
+						s, ok := value.(string)
+						if !ok {
+							return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: reflect.TypeOf("")})
+						}
+						value = nil
+						d := json.NewDecoder(strings.NewReader(s))
+						d.UseNumber()
+						if err := d.Decode(&value); err != nil {
+							return dec.withErrorContext(err)
+						}
+					}
+
 				} else if dec.disallowUnknownFields {
 					return fmt.Errorf("customizablejson: unknown field %q", key)
 				}
