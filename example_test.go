@@ -33,7 +33,7 @@ func ExampleMarshal() {
 	}
 	os.Stdout.Write(b)
 	// Output:
-	// {"ID":1,"Name":"Reds","Colors":["Crimson","Red","Ruby","Maroon"]}
+	// {"Colors":["Crimson","Red","Ruby","Maroon"],"ID":1,"Name":"Reds"}
 }
 
 func ExampleUnmarshal() {
@@ -165,13 +165,13 @@ func ExampleDecoder_Decode_stream() {
 	fmt.Printf("%T: %v\n", t, t)
 
 	// Output:
-	// customizablejson.Delim: [
+	// json.Delim: [
 	// Ed: Knock knock.
 	// Sam: Who's there?
 	// Ed: Go fmt.
 	// Sam: Go fmt who?
 	// Ed: Go fmt yourself!
-	// customizablejson.Delim: ]
+	// json.Delim: ]
 }
 
 // This example uses RawMessage to delay parsing part of a JSON message.
