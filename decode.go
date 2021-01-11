@@ -573,11 +573,6 @@ func (dec *JSONDecoder) typeFields(t reflect.Type) structFields {
 					field.nameBytes = []byte(field.name)
 					field.equalFold = foldFunc(field.nameBytes)
 
-					// Build nameEscHTML and nameNonEsc ahead of time.
-					nameEscBuf.Reset()
-					HTMLEscape(&nameEscBuf, field.nameBytes)
-					field.nameEscHTML = nameEscBuf.String()
-
 					fields = append(fields, field)
 					if count[f.typ] > 1 {
 						// If there were multiple instances, add a second,
