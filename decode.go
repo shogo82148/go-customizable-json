@@ -5,8 +5,10 @@ import (
 	"encoding"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"sync"
 )
 
@@ -150,6 +152,85 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 
 	out = pv
 	switch v := in.(type) {
+	case map[string]interface{}:
+		switch out.Kind() {
+		default:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "object", Type: out.Type()})
+		case reflect.Struct:
+			for key, value := range v {
+				// Figure out field corresponding to key.
+				var subv reflect.Value
+				var f *field
+				fields := dec.myDec.cachedTypeFields(out.Type())
+				for i := range fields.list {
+					ff := &fields.list[i]
+					if ff.name == key {
+						f = ff
+						break
+					}
+					if f == nil && ff.equalFold(ff.nameBytes, []byte(key)) {
+						f = ff
+					}
+				}
+				if f != nil {
+					subv = out
+					for _, i := range f.index {
+						if subv.Kind() == reflect.Ptr {
+							if subv.IsNil() {
+								if !subv.CanSet() {
+									return fmt.Errorf("customizablejson: cannot set embedded pointer to unexported struct: %v", subv.Type().Elem())
+								}
+								subv.Set(reflect.New(subv.Type().Elem()))
+							}
+							subv = subv.Elem()
+						}
+						subv = subv.Field(i)
+					}
+					dec.errorContext.Struct = out.Type().Name()
+					dec.errorContext.Field = f.name
+				} else if dec.disallowUnknownFields {
+					return fmt.Errorf("customizablejson: unknown field %q", key)
+				}
+				err := dec.decode(value, subv)
+				dec.errorContext.Struct = ""
+				dec.errorContext.Field = ""
+				if err != nil {
+					return err
+				}
+			}
+		}
+	case Number:
+		switch out.Kind() {
+		default:
+			return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: out.Type()})
+		case reflect.Interface:
+			n, err := dec.convertNumber(string(v))
+			if err != nil {
+				return err
+			}
+			if out.NumMethod() != 0 {
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "number", Type: out.Type()})
+			}
+			out.Set(reflect.ValueOf(n))
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			n, err := v.Int64()
+			if err != nil || out.OverflowInt(n) {
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
+			}
+			out.SetInt(n)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			n, err := strconv.ParseUint(string(v), 10, 64)
+			if err != nil || out.OverflowUint(n) {
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
+			}
+			out.SetUint(n)
+		case reflect.Float32, reflect.Float64:
+			n, err := strconv.ParseFloat(string(v), out.Type().Bits())
+			if err != nil || out.OverflowFloat(n) {
+				return dec.withErrorContext(&UnmarshalTypeError{Value: "number " + string(v), Type: out.Type()})
+			}
+			out.SetFloat(n)
+		}
 	case string:
 		switch out.Kind() {
 		default:
@@ -177,6 +258,19 @@ func (dec *Decoder) decode(in interface{}, out reflect.Value) error {
 		panic("TODO: implement me!")
 	}
 	return nil
+}
+
+// convertNumber converts the number literal s to a float64 or a Number
+// depending on the setting of dec.useNumber.
+func (dec *Decoder) convertNumber(s string) (interface{}, error) {
+	if dec.useNumber {
+		return Number(s), nil
+	}
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return nil, &UnmarshalTypeError{Value: "number " + s, Type: reflect.TypeOf(0.0)}
+	}
+	return f, nil
 }
 
 var defaultDecoder = new(JSONDecoder)
