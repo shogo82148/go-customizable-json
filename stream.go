@@ -138,6 +138,7 @@ func (enc *Encoder) SetIndent(prefix, indent string) {
 // In non-HTML settings where the escaping interferes with the readability
 // of the output, SetEscapeHTML(false) disables this behavior.
 func (enc *Encoder) SetEscapeHTML(on bool) {
+	enc.encoder.SetEscapeHTML(on)
 }
 
 // RawMessage is an alias of json.RawMessage.
