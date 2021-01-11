@@ -10,6 +10,10 @@ func ptrTime(v time.Time) *time.Time { return &v }
 func ptrString(v string) *string     { return &v }
 func ptrByteSlice(v []byte) *[]byte  { return &v }
 
+type Small struct {
+	Tag string
+}
+
 func TestUnmarshal(t *testing.T) {
 	testcases := []struct {
 		input    string
@@ -112,6 +116,27 @@ func TestUnmarshal(t *testing.T) {
 				Uintptr: 12,
 				Float32: 13,
 				Float64: 14,
+			},
+			register: func() *JSONDecoder {
+				dec := new(JSONDecoder)
+				return dec
+			},
+		},
+		{
+			input: `{
+				"slice": [ {"tag":"tag20"}, {"tag":"tag21"} ],
+				"sliceP": [ {"tag":"tag22"}, {"tag":"tag23"} ]
+			}`,
+			ptr: new(struct {
+				Slice  []Small
+				SliceP []*Small
+			}),
+			want: &struct {
+				Slice  []Small
+				SliceP []*Small
+			}{
+				Slice:  []Small{{Tag: "tag20"}, {Tag: "tag21"}},
+				SliceP: []*Small{{Tag: "tag22"}, nil, {Tag: "tag23"}},
 			},
 			register: func() *JSONDecoder {
 				dec := new(JSONDecoder)
