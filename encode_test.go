@@ -191,3 +191,52 @@ func TestMarshal_Cycle(t *testing.T) {
 		t.Errorf("want UnsupportedValueError, got %T", err)
 	}
 }
+
+func TestMarshalIndent(t *testing.T) {
+	testcases := []struct {
+		input    interface{}
+		want     string
+		register func() *JSONEncoder
+	}{
+		{
+			input: map[string]interface{}{
+				"foo": time.Date(2006, time.January, 2, 15, 4, 5, 123456000, time.UTC),
+			},
+			want: "{\n        \"foo\": \"2006-01-02T15:04:05Z\"\n    }",
+			register: func() *JSONEncoder {
+				enc := new(JSONEncoder)
+				enc.Register(time.Time{}, func(v interface{}) ([]byte, error) {
+					return []byte(`"` + v.(time.Time).Format(time.RFC3339) + `"`), nil
+				})
+				return enc
+			},
+		},
+
+		{
+			input: struct {
+				Foo interface{}
+			}{
+				Foo: time.Date(2006, time.January, 2, 15, 4, 5, 123456000, time.UTC),
+			},
+			want: "{\n        \"Foo\": \"2006-01-02T15:04:05Z\"\n    }",
+			register: func() *JSONEncoder {
+				enc := new(JSONEncoder)
+				enc.Register(time.Time{}, func(v interface{}) ([]byte, error) {
+					return []byte(`"` + v.(time.Time).Format(time.RFC3339) + `"`), nil
+				})
+				return enc
+			},
+		},
+	}
+	for i, tc := range testcases {
+		enc := tc.register()
+		got, err := enc.MarshalIndent(tc.input, "    ", "    ")
+		if err != nil {
+			t.Errorf("#%d: %v", i, err)
+			continue
+		}
+		if string(got) != tc.want {
+			t.Errorf("#%d: want %q, got %q", i, tc.want, got)
+		}
+	}
+}
